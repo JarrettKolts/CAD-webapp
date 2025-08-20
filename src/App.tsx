@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+/*import React, { useRef, useState, useEffect } from "react";
 
 interface Point {
   number: string;
@@ -23,34 +23,55 @@ export default function App() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+  
+    console.log("Selected file:", file.name);
+  
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const rows = text.split("\n");
-      const parsedPoints = rows
-        .map((row) => row.trim())
-        .filter((row) => row.length > 0)
-        .map((row) => {
-          const [number, n, e, z, d] = row.split(",");
-          return {
-            number,
-            northing: parseFloat(n),
-            easting: parseFloat(e),
-            elevation: parseFloat(z),
-            description: d || "",
-          };
+      console.log("File contents:", text);
+  
+      const lines = text.split(/\r?\n/);
+      console.log("This is lines:", lines);
+      const parsedPoints: Point[] = [];
+      console.log("This is Parsed Points", parsedPoints);
+  
+      for (const line of lines) {
+        if (!line.trim()) continue; // skip empty lines
+        const parts = line.split(',');
+        if (parts.length !== 5) {
+          console.error("Skipping invalid line:", line);
+          continue;
+        }
+  
+        const [p, n, e, z, d] = parts;
+        parsedPoints.push({
+          number: p.trim(),
+          northing: parseFloat(n),
+          easting: parseFloat(e),
+          elevation: parseFloat(z),
+          description: d.trim(),
         });
+      }
+  
       setPoints(parsedPoints);
     };
+    
     reader.readAsText(file);
   };
-
+  
   const draw = () => {
+    console.log("This thing is drawing");
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+       console.log("No Canvas Detected"); 
+    return;
+    }
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      console.log("No Canvas Context Detected");
+    return;
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -72,8 +93,30 @@ export default function App() {
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // prevents page scrolling
+  
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom((z) => Math.max(0.1, z * delta));
+    const newZoom = Math.max(0.1, zoom * delta);
+  
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+  
+    const rect = canvas.getBoundingClientRect();
+  
+    // mouse position relative to canvas top-left corner
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+  
+    // world coordinates before zoom
+    const worldX = (mouseX - offset.x) / zoom;
+    const worldY = (mouseY - offset.y) / zoom;
+  
+    // update offset so world point stays under the cursor after zoom
+    const newOffsetX = mouseX - worldX * newZoom;
+    const newOffsetY = mouseY - worldY * newZoom;
+  
+    setZoom(newZoom);
+    setOffset({ x: newOffsetX, y: newOffsetY });
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -101,14 +144,75 @@ export default function App() {
       />
       <canvas
         ref={canvasRef}
-        width={800}
+        width= {2000}
         height={600}
-        className="border border-gray-400"
+        className="border border-blue"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       />
+    </div>
+  );
+}
+*/
+
+import { useState, useRef, useEffect } from "react";
+import CSVUpload from "./components/CSVUploader";
+import Canvas from "./components/DrawingCanvas";
+import Button from "./ui/button.tsx";
+
+export default function App() {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle toggling fullscreen mode
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement && containerRef.current) {
+      containerRef.current.requestFullscreen();
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="h-screen w-screen flex flex-col">
+      {!isFullscreen && (
+        <header className="bg-gray-800 text-white p-4 text-xl font-semibold shadow-md">
+          My Whiteboard App
+        </header>
+      )}
+
+      <main className="flex-1 relative bg-grey overflow-hidden">
+        <Canvas />
+        {!isFullscreen && (
+          <div className="absolute top-4 left-4">
+            <CSVUpload />
+          </div>
+        )}
+        <Button
+          onClick={toggleFullscreen}
+          className="absolute top-4 right-4 z-10"
+        >
+          {isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        </Button>
+      </main>
+
+      {!isFullscreen && (
+        <footer className="bg-gray-200 text-center p-3 text-sm text-gray-600 shadow-inner">
+          &copy; 2025 My Cool App. All rights reserved.
+        </footer>
+      )}
     </div>
   );
 }
