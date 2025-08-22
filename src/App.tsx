@@ -1,5 +1,5 @@
 /*import React, { useRef, useState, useEffect } from "react";
-
+Adding this comment as a test.
 interface Point {
   number: string;
   northing: number;
@@ -161,8 +161,12 @@ import { useState, useRef, useEffect } from "react";
 import CSVUpload from "./components/CSVUploader";
 import Canvas from "./components/DrawingCanvas";
 import Button from "./ui/button.tsx";
+import type { Point } from "./ui/types.ts";
 
 export default function App() {
+  const handlePointsParsed = (points: Point[]) => {
+    console.log(points);
+  };
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -197,7 +201,7 @@ export default function App() {
         <Canvas />
         {!isFullscreen && (
           <div className="absolute top-4 left-4">
-            <CSVUpload />
+            <CSVUpload onPointsParsed={handlePointsParsed} />
           </div>
         )}
         <Button
@@ -216,3 +220,4 @@ export default function App() {
     </div>
   );
 }
+
